@@ -1,0 +1,4 @@
+{
+  "messages_win": "C:/Windows/System32/winevt/Logs/System.evtx",
+  "syslog_win": "C:/Windows/System32/winevt/Logs/Application.evtx"
+}
