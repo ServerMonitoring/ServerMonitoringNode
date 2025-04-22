@@ -307,7 +307,7 @@ def collect_metrics():
             }
         except Exception:
             continue
-
+    """"
     # Температуры
     if hasattr(psutil, "sensors_temperatures"):
         try:
@@ -346,6 +346,8 @@ def collect_metrics():
 
     for log_name, log_path in log_config.items():
         metrics["logs"][log_name] = read_recent_log(log_path)
+
+    """
 
     # Обновляем прошлые значения
     prev_net = net_io
