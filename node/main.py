@@ -54,52 +54,110 @@ def load_log_config(config_path="log_config.json"):
     with open(config_path, "r") as f:
         return json.load(f)
 
+import psutil
+import platform
+import json
+
+""""
 def cpu_metrics(metrics):
-    # CPU
     metrics["cpu"] = {}
 
-    #TODO надо ли общие по всем процессорам и надо ли делать учет нескольких процессоров и правильно ли это работает
+    metrics["cpu"]["cpu_model"] = platform.processor()
 
-    # Общие данные по процессору
-    metrics["cpu"]["cpu_percent_total"] = psutil.cpu_percent(interval=1)  # Общая загрузка процессора
-    metrics["cpu"]["cpu_percent_per_core"] = psutil.cpu_percent(percpu=True)  # Загрузка по каждому ядру
-    metrics["cpu"]["cpu_count"] = psutil.cpu_count(logical=True)  # Количество логических процессоров
-    metrics["cpu"]["cpu_count_physical"] = psutil.cpu_count(logical=False)  # Количество физических процессоров (ядер)
+    # Общая загрузка CPU (в среднем по всем логическим ядрам)
+    metrics["cpu"]["cpu_percent_total_load"] = psutil.cpu_percent(interval=1)
 
+    # Количество ядер
+    metrics["cpu"]["cpu_count"] = psutil.cpu_count(logical=True)  # Логические ядра (включая гиперпоточность)
+    metrics["cpu"]["cpu_count_physical"] = psutil.cpu_count(logical=False)  # Физические ядра
+
+    # Время работы CPU (в сумме по всем ядрам)
     cpu_times = psutil.cpu_times()
-    metrics["cpu"]["cpu_time_user"] = cpu_times.user  # Время в пользовательском режиме
-    metrics["cpu"]["cpu_time_system"] = cpu_times.system  # Время в режиме ядра (системные процессы)
-    metrics["cpu"]["cpu_time_idle"] = cpu_times.idle  # Время простоя
+    metrics["cpu"]["cpu_time_user"] = cpu_times.user
+    metrics["cpu"]["cpu_time_system"] = cpu_times.system
+    metrics["cpu"]["cpu_time_idle"] = cpu_times.idle
 
-    # Статистика по CPU (переключения контекста, прерывания и т.д.)
+    # Статистика по CPU
     cpu_stats = psutil.cpu_stats()
-    metrics["cpu"]["ctx_switches"] = cpu_stats.ctx_switches  # Переключения контекста
-    metrics["cpu"]["interrupts"] = cpu_stats.interrupts  # Аппаратные прерывания
-    metrics["cpu"]["soft_interrupts"] = cpu_stats.soft_interrupts  # Программные прерывания
-    metrics["cpu"]["syscalls"] = cpu_stats.syscalls  # Системные вызовы
+    metrics["cpu"]["ctx_switches"] = cpu_stats.ctx_switches
+    metrics["cpu"]["interrupts"] = cpu_stats.interrupts
+    metrics["cpu"]["soft_interrupts"] = cpu_stats.soft_interrupts
+    metrics["cpu"]["syscalls"] = cpu_stats.syscalls
 
-    #TODO внести доп инфу ( загрузка, ядра ) см выше
-    # Собираем информацию по каждому процессору (физическому)
-    metrics["cpu"]["processors"] = []
-    for i, cpu in enumerate(psutil.cpu_freq(percpu=True)):
-        cpu_info = {
-            "name": platform.processor(),
-            "processor": i,
-            "current_freq_MHz": cpu.current,
-            "min_freq_MHz": cpu.min,
-            "max_freq_MHz": cpu.max,
+    freqs = psutil.cpu_freq(percpu=True)
+    metrics["cpu"]["current_freq_MHz"]=freqs[0].current
+    metrics["cpu"]["min_freq_MHz"]=freqs[0].min
+    metrics["cpu"]["max_freq_MHz"]=freqs[0].max
+
+    # Информация по каждому логическому ядру
+    metrics["cpu"]["cores"] = []
+
+    core_times = psutil.cpu_times(percpu=True)
+
+    # Получаем загрузку по каждому ядру (до цикла)
+    core_loads = psutil.cpu_percent(percpu=True)
+
+    # По ядрам:
+    for i in range(psutil.cpu_count(logical=True)):
+        core_info = {
+            "core_index": i+1,
+            "сore_percent_load": core_loads[i],
+            "core_time_user": core_times[i].user,
+            "core_time_system": core_times[i].system,
+            "core_time_idle": core_times[i].idle,
+            "core_time_interrupt":core_times[i].interrupt,
+            "core_time_dpc":core_times[i].dpc,
+            "core_time_iowait": getattr(core_times[i], 'iowait', None),
+            "core_time_irq": getattr(core_times[i], 'irq', None),
+            "core_time_softirq": getattr(core_times[i], 'softirq', None),
         }
+        metrics["cpu"]["cores"].append(core_info)
 
-        # Получаем время работы CPU для каждого ядра
-        core_times = psutil.cpu_times(percpu=True)[i]
-        cpu_info["cpu_time_user"] = core_times.user
-        cpu_info["cpu_time_system"] = core_times.system
-        cpu_info["cpu_time_idle"] = core_times.idle
-        cpu_info["cpu_time_iowait"] = getattr(core_times, 'iowait', None)  # Если доступно
-        cpu_info["cpu_time_irq"] = getattr(core_times, 'irq', None)  # Если доступно
-        cpu_info["cpu_time_softirq"] = getattr(core_times, 'softirq', None)  # Если доступно
+    return metrics
+"""
 
-        metrics["cpu"]["processors"].append(cpu_info)
+import psutil
+import platform
+
+def cpu_metrics(metrics):
+    metrics["cpu"] = {}
+
+    # Модель CPU
+    metrics["cpu"]["cpu_model"] = platform.processor()
+
+    # Общее количество ядер
+    metrics["cpu"]["cpu_count_cores"] = psutil.cpu_count(logical=True)              # логические ядра (включая hyper-threading)
+    metrics["cpu"]["cpu_count_cores_physical"] = psutil.cpu_count(logical=False)    # физические ядра
+
+    # Общая загрузка CPU
+    metrics["cpu"]["cpu_percent_total_load"] = psutil.cpu_percent(interval=1)
+
+    # Частота CPU (общая, т.к. обычно одинакова для всех ядер)
+    freq = psutil.cpu_freq()
+    metrics["cpu"]["current_freq_MHz"]=freq.current
+    metrics["cpu"]["min_freq_MHz"]=freq.min
+    metrics["cpu"]["max_freq_MHz"]=freq.max
+
+    # Время работы CPU (накопленное)
+    cpu_times = psutil.cpu_times()
+    metrics["cpu"]["cpu_time_user"] = cpu_times.user
+    metrics["cpu"]["cpu_time_system"] = cpu_times.system
+    metrics["cpu"]["cpu_time_idle"] = cpu_times.idle
+
+    # Системная статистика CPU
+    cpu_stats = psutil.cpu_stats()
+    metrics["cpu"]["ctx_switches"] = cpu_stats.ctx_switches
+    metrics["cpu"]["interrupts"] = cpu_stats.interrupts
+    metrics["cpu"]["soft_interrupts"] = cpu_stats.soft_interrupts
+    metrics["cpu"]["syscalls"] = cpu_stats.syscalls
+
+    # Загрузка по каждому ядру
+    core_loads = psutil.cpu_percent(percpu=True)
+    metrics["cpu"]["cores"] = [
+        {"core_index": i+1, "core_percent_load": core_loads[i]}
+        for i in range(len(core_loads))
+    ]
+
     return metrics
 
 
@@ -156,7 +214,7 @@ def collect_metrics():
     for gpu in GPUtil.getGPUs():
         try:
             metrics["gpu"].append({
-                "name": gpu.name,
+                "gpu_name": gpu.name,
                 "load_percent": round(gpu.load * 100, 1),
                 "memory_total_MB": gpu.memoryTotal,
                 "memory_used_MB": gpu.memoryUsed,
@@ -299,8 +357,7 @@ def collect_metrics():
 def send_metrics():
     while True:
         metrics = collect_metrics()
-        metrics["time"] = time.strftime('%X')
-        metrics["date"] = time.strftime('%Y-%m-%d')
+        metrics["timestamp"] = time.strftime('%Y-%m-%d-%X')
         print(f"[{time.strftime('%X')}] Sent metrics for {metrics['hostname']} ")
         print(json.dumps(metrics, indent=2, ensure_ascii=False))
         try:
