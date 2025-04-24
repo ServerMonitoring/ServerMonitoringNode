@@ -7,10 +7,11 @@ import os
 import json
 import GPUtil
 
-
-SERVER_URL = "http://your-server.com:8080/metrics"
+#TODO надо вынести в config.json
+METRICS_URL = "http://your-server.com:8080/metrics"
+STATIC_INFO_URL = "http://your-server.com:8080/info"
+LOG_URL = "http://your-server.com:8080/log"
 AUTH_TOKEN = "your_secret_token"  # можно убрать если не используешь авторизацию
-
 
 HEADERS = {
     "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -21,6 +22,7 @@ HEADERS = {
 prev_net = psutil.net_io_counters()
 prev_disk = psutil.disk_io_counters()
 prev_time = time.time()
+
 
 def get_failed_ssh_attempts():
     try:
@@ -33,8 +35,19 @@ def get_failed_ssh_attempts():
     except Exception:
         return -1
 
+
+def get_static_info():
+    return {
+        "hostname": socket.gethostname(),  # имя хоста
+        "os": platform.platform(),  # полное описание ОС
+        "cpu_model": platform.processor(),  # модель процессора
+        "cpu_count_cores": psutil.cpu_count(logical=True),  # количество логических ядер
+        "cpu_count_cores_physical": psutil.cpu_count(logical=False),  # количество физических ядер
+    }
+
 def is_linux():
     return platform.system().lower() == "linux"
+
 
 def calc_rate(current, previous, elapsed):
     return round((current - previous) * 8 / 1024 / 1024 / elapsed, 2)  # Mbps
@@ -48,15 +61,13 @@ def read_recent_log(filepath, lines=50):
     except Exception as e:
         return [f"Ошибка чтения {filepath}: {e}"]
 
+
 def load_log_config(config_path="log_config.json"):
     if not os.path.exists(config_path):
         return {}
     with open(config_path, "r") as f:
         return json.load(f)
 
-import psutil
-import platform
-import json
 
 """"
 def cpu_metrics(metrics):
@@ -116,33 +127,31 @@ def cpu_metrics(metrics):
     return metrics
 """
 
-import psutil
-import platform
 
 def cpu_metrics(metrics):
     metrics["cpu"] = {}
 
     # Модель CPU
-    metrics["cpu"]["cpu_model"] = platform.processor()
+    #metrics["cpu"]["cpu_model"] = platform.processor()
 
     # Общее количество ядер
-    metrics["cpu"]["cpu_count_cores"] = psutil.cpu_count(logical=True)              # логические ядра (включая hyper-threading)
-    metrics["cpu"]["cpu_count_cores_physical"] = psutil.cpu_count(logical=False)    # физические ядра
+    #metrics["cpu"]["cpu_count_cores"] = psutil.cpu_count(logical=True)  # логические ядра (включая hyper-threading)
+    #metrics["cpu"]["cpu_count_cores_physical"] = psutil.cpu_count(logical=False)  # физические ядра
 
     # Общая загрузка CPU
     metrics["cpu"]["cpu_percent_total_load"] = psutil.cpu_percent(interval=1)
 
     # Частота CPU (общая, т.к. обычно одинакова для всех ядер)
     freq = psutil.cpu_freq()
-    metrics["cpu"]["current_freq_MHz"]=freq.current
-    metrics["cpu"]["min_freq_MHz"]=freq.min
-    metrics["cpu"]["max_freq_MHz"]=freq.max
+    metrics["cpu"]["current_freq_MHz"] = freq.current
+    metrics["cpu"]["min_freq_MHz"] = freq.min
+    metrics["cpu"]["max_freq_MHz"] = freq.max
 
     # Время работы CPU (накопленное)
     cpu_times = psutil.cpu_times()
-    metrics["cpu"]["cpu_time_user"] = cpu_times.user
-    metrics["cpu"]["cpu_time_system"] = cpu_times.system
-    metrics["cpu"]["cpu_time_idle"] = cpu_times.idle
+    metrics["cpu"]["cpu_time_user"] = round(cpu_times.user,2)
+    metrics["cpu"]["cpu_time_system"] = round(cpu_times.system,2)
+    metrics["cpu"]["cpu_time_idle"] = round(cpu_times.idle,2)
 
     # Системная статистика CPU
     cpu_stats = psutil.cpu_stats()
@@ -154,7 +163,7 @@ def cpu_metrics(metrics):
     # Загрузка по каждому ядру
     core_loads = psutil.cpu_percent(percpu=True)
     metrics["cpu"]["cores"] = [
-        {"core_index": i+1, "core_percent_load": core_loads[i]}
+        {"core_index": i + 1, "core_percent_load": core_loads[i]}
         for i in range(len(core_loads))
     ]
 
@@ -171,8 +180,8 @@ def collect_metrics():
     disk_io = psutil.disk_io_counters()
 
     metrics = {
-        "hostname": socket.gethostname(),
-        "os": platform.platform(),
+        #"hostname": socket.gethostname(),
+        #"os": platform.platform(),
 
         # Доступность
         "up": True,
@@ -356,18 +365,21 @@ def collect_metrics():
 
     return metrics
 
-def send_metrics():
-    while True:
-        metrics = collect_metrics()
-        metrics["timestamp"] = time.strftime('%Y-%m-%d-%X')
-        print(f"[{time.strftime('%X')}] Sent metrics for {metrics['hostname']} ")
-        print(json.dumps(metrics, indent=2, ensure_ascii=False))
-        try:
-            response = requests.post(SERVER_URL, data=json.dumps(metrics), headers=HEADERS, timeout=5)
-            print(f"[{time.strftime('%X')}] Sent metrics for {metrics['hostname']} | Status: {response.status_code}")
-        except Exception as e:
-            print(f"Send error: {e}")
-        time.sleep(10)
+
+def send_metrics(metrics, url,header):
+    metrics["timestamp"] = time.strftime('%Y-%m-%d-%X')
+    print(f"[{time.strftime('%X')}] Sent metrics  ")
+    print(json.dumps(metrics, indent=2, ensure_ascii=False))
+    try:
+        response = requests.post(url, data=json.dumps(metrics), headers=header, timeout=5)
+        print(f"[{time.strftime('%X')}] Sent metrics  | Status: {response.status_code}")
+    except Exception as e:
+        print(f"Send error: {e}")
+
+
 
 if __name__ == "__main__":
-    send_metrics()
+    send_metrics(get_static_info(), STATIC_INFO_URL, HEADERS)
+    while True:
+        send_metrics(collect_metrics(), METRICS_URL, HEADERS)
+        time.sleep(10)
