@@ -172,6 +172,7 @@ def run_agent():
         time.sleep(1)
 """
 
+
 def save_metrics(new_metrics, filename="metrics_log.json"):
     # Если файл существует, читаем его содержимое
     if os.path.exists(filename):
@@ -190,6 +191,7 @@ def save_metrics(new_metrics, filename="metrics_log.json"):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+
 def run_agent():
     global monitoring
 
@@ -206,8 +208,8 @@ def run_agent():
 
         monitoring = False
         monitor_thread.join()  # дожидаемся окончания потока мониторинга
-        avg_cpu = sum(cpu_usages) / len(cpu_usages) if cpu_usages else 0
-        max_memory = max(memory_usages) if memory_usages else 0
+        avg_cpu = round(sum(cpu_usages) / len(cpu_usages), 3) if cpu_usages else 0
+        max_memory = round(max(memory_usages), 3) if memory_usages else 0
 
         metrics = build_metrics()
         metrics["agent_resource_usage"] = {
