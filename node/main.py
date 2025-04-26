@@ -43,6 +43,8 @@ def get_static_info():
         "cpu_model": platform.processor(),  # модель процессора
         "cpu_count_cores": psutil.cpu_count(logical=True),  # количество логических ядер
         "cpu_count_cores_physical": psutil.cpu_count(logical=False),  # количество физических ядер
+        "min_freq_MHz": psutil.cpu_freq().min,
+        "max_freq_MHz":psutil.cpu_freq().max
     }
 
 def is_linux():
@@ -144,8 +146,8 @@ def cpu_metrics(metrics):
     # Частота CPU (общая, т.к. обычно одинакова для всех ядер)
     freq = psutil.cpu_freq()
     metrics["cpu"]["current_freq_MHz"] = freq.current
-    metrics["cpu"]["min_freq_MHz"] = freq.min
-    metrics["cpu"]["max_freq_MHz"] = freq.max
+    #metrics["cpu"]["min_freq_MHz"] = freq.min
+    #metrics["cpu"]["max_freq_MHz"] = freq.max
 
     # Время работы CPU (накопленное)
     cpu_times = psutil.cpu_times()
