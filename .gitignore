@@ -4,3 +4,4 @@ node.zip
 
 __pycache__/
 *.pyc
+node/update/metrics_log.json
