@@ -1,2 +1,7 @@
 node/paths_config_example.json
 node/mainCleare.py
+node.zip
+
+__pycache__/
+*.pyc
+node/update/metrics_log.json
