@@ -25,7 +25,7 @@ def get_volatile_metrics():
         ],
         "ram": {
             "used": round(virtual_mem.used / 1024 / 1024 , 2),
-            "free": round(virtual_mem.used / 1024 / 1024 , 2),
+            "free": round(virtual_mem.free / 1024 / 1024 , 2),
             "cached": round(getattr(virtual_mem, "cached", 0) / 1024 / 1024 , 2),
             "percent": virtual_mem.percent
         },
