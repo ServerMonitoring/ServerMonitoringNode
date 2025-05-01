@@ -3,7 +3,8 @@ import json
 import os
 import threading
 from collections import deque
-
+import socket
+import platform
 import psutil
 
 from config import INTERVAL
@@ -57,8 +58,23 @@ def save_metrics(new_metrics, filename="metrics_log.json"):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def get_static_info():
+    return {
+        "hostname": socket.gethostname(),  # имя хоста
+        "os": platform.platform(),  # полное описание ОС
+        "cpu_model": platform.processor(),  # модель процессора
+        "cpu_count_cores": psutil.cpu_count(logical=True),  # количество логических ядер
+        "cpu_count_cores_physical": psutil.cpu_count(logical=False),  # количество физических ядер
+        "min_freq_MHz": psutil.cpu_freq().min,
+        "max_freq_MHz": psutil.cpu_freq().max
+    }
+
+
 async def run_agent():
     logger.info("[NODE] Node started")
+    started_metrics = get_static_info()
+    save_metrics(started_metrics)
+    await handle_send(started_metrics)
     start_background_monitoring()
     while True:
 
