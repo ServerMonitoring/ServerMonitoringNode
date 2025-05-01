@@ -1,4 +1,21 @@
 import logging
+import time
+
+#TODO добавить на обновление файлов логов
+""""
+# --- DEBUG + INFO + WARNING → debug.log ---
+debug_handler = RotatingFileHandler(
+    "debug.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+)
+debug_handler.setLevel(logging.DEBUG)
+
+
+# --- INFO + WARNING + ERROR + CRITICAL → error.log ---
+error_handler = RotatingFileHandler(
+    "error.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+)
+error_handler.setLevel(logging.INFO)
+"""
 
 # Создаём корневой логгер
 logger = logging.getLogger("agent")
@@ -17,6 +34,7 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 
 #  Формат логов
+logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 debug_handler.setFormatter(formatter)
 error_handler.setFormatter(formatter)
