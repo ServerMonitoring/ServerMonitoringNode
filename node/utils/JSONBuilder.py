@@ -1,23 +1,26 @@
-import json
+import asyncio
 import platform
 import time
 
 import psutil
 
-from update.collector.volatile_metrics import get_volatile_metrics
-from update.collector.delta_metrics import get_initial_deltas, get_deltas
-from update.collector.static_metrics import get_static_metrics
-from update.utils.averaging import average_metric_list
+from collector.volatile_metrics import get_volatile_metrics
+from collector.delta_metrics import get_initial_deltas, get_deltas
+from collector.static_metrics import get_static_metrics
+from config import INTERVAL
+from utils.averaging import average_metric_list
 
 
-def collect_data():
+async def collect_data():
     volatile_data = []
     start_deltas = get_initial_deltas()
 
-    for _ in range(60):
-        #print(_)
-        volatile_data.append(get_volatile_metrics())
-        time.sleep(1)
+    for _ in range(INTERVAL):
+        print(f"Start iteration {_}")
+        data = get_volatile_metrics()
+        volatile_data.append(data)
+        print(f"Collected volatile metrics for {_}")
+        await asyncio.sleep(1)
 
     end_deltas = get_initial_deltas()
     averaged = average_metric_list(volatile_data)
@@ -103,7 +106,7 @@ def build_disk_partitions():
     for part in psutil.disk_partitions():
         try:
             usage = psutil.disk_usage(part.mountpoint)
-            partition_info = part._asdict()  # превращаем в словарь
+            partition_info = part._asdict()
             partition_info.update({
                 "total": round(usage.total / 1024 / 1024, 2),
                 "used": round(usage.used / 1024 / 1024, 2),
@@ -142,27 +145,20 @@ def build_gpu(averaged_gpu, static_gpu):
     return combined_gpu_info
 
 
-
-def build_metrics():
-    averaged, delta, static = collect_data()
-    metrics = {
-
-        # Доступность
-        "up": True,
-        "uptime_seconds": round(time.time() - psutil.boot_time(), 2),  # время работы системы с момента загрузки
-
-        # Безопасность (условно)
-        "failed_logins": get_failed_ssh_attempts() if is_linux() else -1
-        # количество неудачных SSH попыток входа (Linux)
-    }
-    metrics["cpu"] = build_cpu_metrics(averaged, delta)
-    metrics["memory"] = build_ram_metrics(averaged, static)
-    metrics["swap"] = build_swap_metrics(averaged, static)
-    metrics["network_connections"] = static["network_connections"]
-    metrics["net_interfaces"] = build_net_interfaces(delta["net_io"])
-    metrics["disk_partitions"] = build_disk_partitions()
-    metrics["disk_io"] = build_disk_io(delta["disk_io"])
-    metrics["gpu"] = build_gpu(averaged["gpu_load"], static["gpu_info"])
+async def build_metrics():
+    averaged, delta, static = await collect_data()
+    metrics = {"up": True,
+               "uptime_seconds": round(time.time() - psutil.boot_time(), 2),
+               "failed_logins": get_failed_ssh_attempts() if is_linux() else -1,
+               "cpu": build_cpu_metrics(averaged, delta),
+               "memory": build_ram_metrics(averaged, static),
+               "swap": build_swap_metrics(averaged, static),
+               "network_connections": static["network_connections"],
+               "net_interfaces": build_net_interfaces(delta["net_io"]),
+               "disk_partitions": build_disk_partitions(),
+               "disk_io": build_disk_io(delta["disk_io"]),
+               "gpu": build_gpu(averaged["gpu_load"], static["gpu_info"])
+               }
 
     return metrics
 

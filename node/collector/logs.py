@@ -1,4 +1,4 @@
-from update.config import LOG_PATH
+from config import LOG_PATH
 
 
 def get_recent_auth_logs():
