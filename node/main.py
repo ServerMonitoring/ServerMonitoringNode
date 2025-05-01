@@ -3,10 +3,11 @@ import json
 import os
 import threading
 from collections import deque
-
+import socket
+import platform
 import psutil
 
-from config import INTERVAL
+from config import INTERVAL, SEND_METRIC, SEND_INIT
 from sender.sender import send_payload
 from utils.JSONBuilder import build_metrics
 from utils.logger import logger
@@ -57,8 +58,23 @@ def save_metrics(new_metrics, filename="metrics_log.json"):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def get_static_info():
+    return {
+        "hostname": socket.gethostname(),  # имя хоста
+        "os": platform.platform(),  # полное описание ОС
+        "cpu_model": platform.processor(),  # модель процессора
+        "cpu_count_cores": psutil.cpu_count(logical=True),  # количество логических ядер
+        "cpu_count_cores_physical": psutil.cpu_count(logical=False),  # количество физических ядер
+        "min_freq_MHz": psutil.cpu_freq().min,
+        "max_freq_MHz": psutil.cpu_freq().max
+    }
+
+
 async def run_agent():
     logger.info("[NODE] Node started")
+    started_metrics = get_static_info()
+    save_metrics(started_metrics)
+    await handle_send(started_metrics, SEND_INIT)
     start_background_monitoring()
     while True:
 
@@ -73,13 +89,13 @@ async def run_agent():
         metrics["agent_resource_usage"] = get_agent_usage_metrics()
 
         asyncio.create_task(asyncio.to_thread(save_metrics, metrics))
-        asyncio.create_task(handle_send(metrics))
+        asyncio.create_task(handle_send(metrics, SEND_METRIC))
 
         await asyncio.sleep(1)
 
 
-async def handle_send(metrics):
-    status, text = await send_payload(metrics)
+async def handle_send(metrics, address):
+    status, text = await send_payload(metrics, address)
     if status != 200:
         #print(f"[RETRY NEEDED] Status: {status}, response: {text}")
         logger.error(f"[ERROR-Run_agent] Status: {status}, response: {text}")
