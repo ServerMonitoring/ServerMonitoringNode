@@ -1,5 +1,5 @@
 import psutil
-from update.utils import delta
+from utils import delta
 
 
 def get_initial_deltas():

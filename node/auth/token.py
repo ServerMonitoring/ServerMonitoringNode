@@ -1,4 +1,4 @@
-from update.config import JWT_TOKEN
+from config import JWT_TOKEN
 def get_token():
     # Временно просто возвращаем из конфигурации
     return JWT_TOKEN
