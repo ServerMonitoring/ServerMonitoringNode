@@ -2,6 +2,7 @@
 import requests
 import aiohttp
 from config import SERVER_URL, JWT_TOKEN
+from utils.logger import logger
 
 """"
 def send_payload(payload):
@@ -12,19 +13,19 @@ def send_payload(payload):
 
 
 async def send_payload(payload):
-    print("IM IN SENDER")
+    #print("IM IN SENDER")
+    logger.debug("[SENDER] Sending metrics")
     headers = {"Authorization": f"Bearer {JWT_TOKEN}"}
     try:
         async with aiohttp.ClientSession() as session:
-            #await asyncio.sleep(6)
-            print("IM IN SENDER session")
             async with session.post(SERVER_URL, json=payload, headers=headers, timeout=5) as response:
-                print("IM IN SENDER response")
                 text = await response.text()
-                print(response.status, text)
+                #print(response.status, text)
+                logger.debug(f"[SENDER] Response Status {response.status} and data {text}")
                 return response.status, text
     except aiohttp.ClientError as e:
-        print(f"[SEND ERROR] Failed to send metrics: {e}")
+        #print(f"[SEND ERROR] Failed to send metrics: {e}")
+        logger.error(f"[ERROR-SENDER] Failed to send metrics: {e}")
         return None, str(e)
 
 
