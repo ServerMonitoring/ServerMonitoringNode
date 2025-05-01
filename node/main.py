@@ -7,7 +7,7 @@ import socket
 import platform
 import psutil
 
-from config import INTERVAL
+from config import INTERVAL, SEND_METRIC, SEND_INIT
 from sender.sender import send_payload
 from utils.JSONBuilder import build_metrics
 from utils.logger import logger
@@ -74,7 +74,7 @@ async def run_agent():
     logger.info("[NODE] Node started")
     started_metrics = get_static_info()
     save_metrics(started_metrics)
-    await handle_send(started_metrics)
+    await handle_send(started_metrics, SEND_INIT)
     start_background_monitoring()
     while True:
 
@@ -89,13 +89,13 @@ async def run_agent():
         metrics["agent_resource_usage"] = get_agent_usage_metrics()
 
         asyncio.create_task(asyncio.to_thread(save_metrics, metrics))
-        asyncio.create_task(handle_send(metrics))
+        asyncio.create_task(handle_send(metrics, SEND_METRIC))
 
         await asyncio.sleep(1)
 
 
-async def handle_send(metrics):
-    status, text = await send_payload(metrics)
+async def handle_send(metrics, address):
+    status, text = await send_payload(metrics, address)
     if status != 200:
         #print(f"[RETRY NEEDED] Status: {status}, response: {text}")
         logger.error(f"[ERROR-Run_agent] Status: {status}, response: {text}")
