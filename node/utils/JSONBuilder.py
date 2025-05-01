@@ -9,6 +9,7 @@ from collector.delta_metrics import get_initial_deltas, get_deltas
 from collector.static_metrics import get_static_metrics
 from config import INTERVAL
 from utils.averaging import average_metric_list
+from utils.logger import logger
 
 
 async def collect_data():
@@ -16,10 +17,11 @@ async def collect_data():
     start_deltas = get_initial_deltas()
 
     for _ in range(INTERVAL):
-        print(f"Start iteration {_}")
+        #print(f"Start iteration {_}")
+        logger.debug(f"[JSONBuilder] Collected volatile metrics for {_}")
         data = get_volatile_metrics()
         volatile_data.append(data)
-        print(f"Collected volatile metrics for {_}")
+        #print(f"Collected volatile metrics for {_}")
         await asyncio.sleep(1)
 
     end_deltas = get_initial_deltas()

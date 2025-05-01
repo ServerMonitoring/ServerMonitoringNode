@@ -9,6 +9,7 @@ import psutil
 from config import INTERVAL
 from sender.sender import send_payload
 from utils.JSONBuilder import build_metrics
+from utils.logger import logger
 
 cpu_usages = deque(maxlen=INTERVAL)
 memory_usages = deque(maxlen=INTERVAL)
@@ -23,7 +24,8 @@ def start_background_monitoring():
             mem = process.memory_info().rss / 1024 ** 2
             cpu_usages.append(cpu)
             memory_usages.append(mem)
-            print(f"[MONITOR] CPU: {cpu:.2f}%, RAM: {mem:.2f} MB")
+            #print(f"[MONITOR] CPU: {cpu:.2f}%, RAM: {mem:.2f} MB")
+            logger.debug(f"[MONITOR] CPU: {cpu:.2f}%, RAM: {mem:.2f} MB")
 
     thread = threading.Thread(target=monitor, daemon=True)
     thread.start()
@@ -56,6 +58,7 @@ def save_metrics(new_metrics, filename="metrics_log.json"):
 
 
 async def run_agent():
+    logger.info("[NODE] Node started")
     start_background_monitoring()
     while True:
 
@@ -63,7 +66,8 @@ async def run_agent():
             #TODO возможно вынести в asyncio.to_thread(...) из-за psutil.cpu_percent(interval=1) - блокирует в любом случае на 1 секунду или делать 0
             metrics = await build_metrics()
         except Exception as e:
-            print(f"[ERROR] Failed to build metrics: {e}")
+            #print(f"[ERROR] Failed to build metrics: {e}")
+            logger.error(f"[ERROR-Run_agent] Failed to build metrics: {e}")
             return
 
         metrics["agent_resource_usage"] = get_agent_usage_metrics()
@@ -77,7 +81,8 @@ async def run_agent():
 async def handle_send(metrics):
     status, text = await send_payload(metrics)
     if status != 200:
-        print(f"[RETRY NEEDED] Status: {status}, response: {text}")
+        #print(f"[RETRY NEEDED] Status: {status}, response: {text}")
+        logger.error(f"[ERROR-Run_agent] Status: {status}, response: {text}")
 
 
 if __name__ == "__main__":
