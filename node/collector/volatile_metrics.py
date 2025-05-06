@@ -6,8 +6,8 @@ def get_volatile_gpu_metrics():
     for gpu in GPUtil.getGPUs():
         gpus[gpu.id] = {
             "load_percent": round(gpu.load * 100, 2),
-            "memory_used_MB": gpu.memoryUsed,
-            "memoryFree": gpu.memoryFree,
+            "memory_used": gpu.memoryUsed,
+            "memory_free": gpu.memoryFree,
             "memory_used_percent": round(gpu.memoryUtil * 100, 2),
             "temperature": gpu.temperature
         }
