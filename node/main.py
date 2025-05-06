@@ -65,8 +65,8 @@ def get_static_info():
         "cpu_model": platform.processor(),  # модель процессора
         "cpu_count_cores": psutil.cpu_count(logical=True),  # количество логических ядер
         "cpu_count_cores_physical": psutil.cpu_count(logical=False),  # количество физических ядер
-        "min_freq_MHz": psutil.cpu_freq().min,
-        "max_freq_MHz": psutil.cpu_freq().max
+        "min_freq": psutil.cpu_freq().min,
+        "max_freq": psutil.cpu_freq().max
     }
 
 

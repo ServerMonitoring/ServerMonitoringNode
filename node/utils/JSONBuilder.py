@@ -1,6 +1,7 @@
 import asyncio
 import platform
 import time
+from datetime import datetime, timezone
 
 import psutil
 
@@ -92,8 +93,8 @@ def build_swap_metrics(averaged, static):
 
 def build_net_interfaces(delta_net_io):
     return {
-        "sent_MB": delta_net_io["bytes_sent"],
-        "recv_MB": delta_net_io["bytes_recv"],
+        "sent": delta_net_io["bytes_sent"],
+        "recv": delta_net_io["bytes_recv"],
         "packets_sent": delta_net_io["packets_sent"],
         "packets_recv": delta_net_io["packets_recv"],
         "err_in": delta_net_io["errin"],
@@ -128,8 +129,8 @@ def build_disk_io(delta_disk_io):
         result[disk_name] = {
             "read_count": io_data["read_count"],
             "write_count": io_data["write_count"],
-            "read_MB": io_data["read_MB"],
-            "write_MB": io_data["write_MB"],
+            "read": io_data["read_MB"],
+            "write": io_data["write_MB"],
         }
     return result
 
@@ -150,16 +151,17 @@ def build_gpu(averaged_gpu, static_gpu):
 async def build_metrics():
     averaged, delta, static = await collect_data()
     metrics = {"up": True,
-               "uptime_seconds": round(time.time() - psutil.boot_time(), 2),
+               "uptime": round(time.time() - psutil.boot_time(), 2),
                "failed_logins": get_failed_ssh_attempts() if is_linux() else -1,
                "cpu": build_cpu_metrics(averaged, delta),
                "memory": build_ram_metrics(averaged, static),
                "swap": build_swap_metrics(averaged, static),
                "network_connections": static["network_connections"],
-               "net_interfaces": build_net_interfaces(delta["net_io"]),
+               "net_interfaces": [build_net_interfaces(delta["net_io"])],
                "disk_partitions": build_disk_partitions(),
                "disk_io": build_disk_io(delta["disk_io"]),
-               "gpu": build_gpu(averaged["gpu_load"], static["gpu_info"])
+               "gpu": build_gpu(averaged["gpu_load"], static["gpu_info"]),
+               "timestamp": datetime.utcnow().replace(microsecond=0).isoformat()+"Z"
                }
 
     return metrics
