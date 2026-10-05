@@ -9,3 +9,4 @@ node/metrics_log.json
 /old
 node/debug.log
 node/error.log
+/.idea
