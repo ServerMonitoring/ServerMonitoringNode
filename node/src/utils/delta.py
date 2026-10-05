@@ -1,12 +1,21 @@
 def calculate_delta(start, end, fields=None, round_digits=3):
+    start = start or {}
+    end = end or {}
     if fields is None:
-        fields = start.keys()
-    return {field: round(end[field] - start[field], round_digits) for field in fields}
+        fields = start.keys() & end.keys()
+    result = {}
+    for field in fields:
+        start_value = start.get(field)
+        end_value = end.get(field)
+        if isinstance(start_value, (int, float)) and isinstance(end_value, (int, float)):
+            result[field] = round(end_value - start_value, round_digits)
+    return result
 
 def calculate_disk_io_deltas(start_disk_io, end_disk_io,round_digits=3):
     deltas = {}
+    end_disk_io = end_disk_io or {}
 
-    for disk, start_io in start_disk_io.items():
+    for disk, start_io in (start_disk_io or {}).items():
         if disk in end_disk_io:  # чтобы избежать ошибок, если вдруг диск пропал
             end_io = end_disk_io[disk]
             deltas[disk] = {

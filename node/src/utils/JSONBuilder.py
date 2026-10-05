@@ -1,5 +1,4 @@
 import asyncio
-import platform
 import time
 from datetime import datetime, timezone
 
@@ -9,6 +8,7 @@ from collector.volatile_metrics import get_volatile_metrics
 from collector.delta_metrics import get_initial_deltas, get_deltas
 from collector.static_metrics import get_static_metrics
 from config import INTERVAL
+from collector.logs import get_failed_ssh_attempts
 from utils.averaging import average_metric_list
 from utils.logger import logger
 
@@ -32,22 +32,6 @@ async def collect_data():
     return averaged, delta, static
 
 
-def get_failed_ssh_attempts():
-    try:
-        count = 0
-        with open("/var/log/auth.log", "r") as f:
-            for line in f:
-                if "Failed password" in line:
-                    count += 1
-        return count
-    except Exception:
-        return -1
-
-
-def is_linux():
-    return platform.system().lower() == "linux"
-
-
 def add_core_index(cores_list):
     return [
         {"core_index": idx + 1, **core}
@@ -63,12 +47,12 @@ def build_cpu_metrics(averaged, delta):
         "cpu_time_user": delta["cpu_times"]["user"],
         "cpu_time_system": delta["cpu_times"]["system"],
         "cpu_time_idle": delta["cpu_times"]["idle"],
-        "cpu_time_interrupt": delta["cpu_times"]["interrupt"],
-        "cpu_time_dpc": delta["cpu_times"]["dpc"],
-        "ctx_switches": delta["cpu_stats"]["ctx_switches"],
-        "interrupts": delta["cpu_stats"]["interrupts"],
-        "soft_interrupts": delta["cpu_stats"]["soft_interrupts"],
-        "syscalls": delta["cpu_stats"]["syscalls"]
+        "cpu_time_interrupt": delta["cpu_times"].get("interrupt"),
+        "cpu_time_dpc": delta["cpu_times"].get("dpc"),
+        "ctx_switches": delta["cpu_stats"].get("ctx_switches"),
+        "interrupts": delta["cpu_stats"].get("interrupts"),
+        "soft_interrupts": delta["cpu_stats"].get("soft_interrupts"),
+        "syscalls": delta["cpu_stats"].get("syscalls")
     }
 
 
@@ -93,14 +77,14 @@ def build_swap_metrics(averaged, static):
 
 def build_net_interfaces(delta_net_io):
     return {
-        "sent": delta_net_io["bytes_sent"],
-        "recv": delta_net_io["bytes_recv"],
-        "packets_sent": delta_net_io["packets_sent"],
-        "packets_recv": delta_net_io["packets_recv"],
-        "err_in": delta_net_io["errin"],
-        "err_out": delta_net_io["errout"],
-        "drop_in": delta_net_io["dropin"],
-        "drop_out": delta_net_io["dropout"],
+        "sent": delta_net_io.get("bytes_sent"),
+        "recv": delta_net_io.get("bytes_recv"),
+        "packets_sent": delta_net_io.get("packets_sent"),
+        "packets_recv": delta_net_io.get("packets_recv"),
+        "err_in": delta_net_io.get("errin"),
+        "err_out": delta_net_io.get("errout"),
+        "drop_in": delta_net_io.get("dropin"),
+        "drop_out": delta_net_io.get("dropout"),
     }
 
 
@@ -117,7 +101,7 @@ def build_disk_partitions():
                 "used_percent": usage.percent
             })
             partitions.append(partition_info)
-        except PermissionError:
+        except (OSError, psutil.Error):
             # бывает на некоторых системных точках монтирования без доступа
             continue
     return partitions
@@ -153,7 +137,7 @@ async def build_metrics():
     logger.debug(f"[JSONBuilder] Building JSON")
     metrics = {"up": True,
                "uptime": round(time.time() - psutil.boot_time(), 2),
-               "failed_logins": get_failed_ssh_attempts() if is_linux() else -1,
+               "failed_logins": get_failed_ssh_attempts(),
                "cpu": build_cpu_metrics(averaged, delta),
                "memory": build_ram_metrics(averaged, static),
                "swap": build_swap_metrics(averaged, static),
@@ -162,7 +146,7 @@ async def build_metrics():
                "disk_partitions": build_disk_partitions(),
                "disk_io": build_disk_io(delta["disk_io"]),
                "gpu": build_gpu(averaged["gpu_load"], static["gpu_info"]),
-               "timestamp": datetime.utcnow().replace(microsecond=0).isoformat()+"Z"
+               "timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
                }
 
     return metrics

@@ -1,0 +1,16 @@
+[agent]
+# Backend endpoint that accepts changing metrics.
+metric_url = http://localhost:8080/api/node/changeable
+
+# Backend endpoint that accepts static node information.
+init_url = http://localhost:8080/api/node/static
+
+# Paste the node token returned when the server is registered in the backend.
+jwt_token =
+
+# Number of seconds included in each metrics collection window.
+interval_seconds = 20
+
+# Optional plain-text SSH authentication log. Ubuntu: /var/log/auth.log; RHEL: /var/log/secure.
+# Leave empty to disable failed SSH login collection.
+auth_log_path =

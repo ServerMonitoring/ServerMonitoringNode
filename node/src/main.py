@@ -7,7 +7,7 @@ import socket
 import platform
 import psutil
 
-from config import INTERVAL, SEND_METRIC, SEND_INIT
+from config import INTERVAL, SEND_METRIC, SEND_INIT, JWT_TOKEN
 from sender.sender import send_payload
 from utils.JSONBuilder import build_metrics
 from utils.logger import logger
@@ -59,14 +59,15 @@ def save_metrics(new_metrics, filename="metrics_log.json"):
 
 
 def get_static_info():
+    cpu_frequency = psutil.cpu_freq()
     return {
         "hostname": socket.gethostname(),  # имя хоста
         "os": platform.platform(),  # полное описание ОС
         "cpu_model": platform.processor(),  # модель процессора
         "cpu_count_cores": psutil.cpu_count(logical=True),  # количество логических ядер
         "cpu_count_cores_physical": psutil.cpu_count(logical=False),  # количество физических ядер
-        "min_freq": psutil.cpu_freq().min,
-        "max_freq": psutil.cpu_freq().max
+        "min_freq": cpu_frequency.min if cpu_frequency is not None else None,
+        "max_freq": cpu_frequency.max if cpu_frequency is not None else None
     }
 
 async def handle_send(metrics, address):
@@ -77,6 +78,9 @@ async def handle_send(metrics, address):
 
 async def run_agent():
     logger.info("[NODE] Node started")
+    if not SEND_INIT or not SEND_METRIC or not JWT_TOKEN:
+        logger.error("[NODE] Configure metric_url, init_url and jwt_token in node.ini before starting the node")
+        return
     started_metrics = get_static_info()
     save_metrics(started_metrics)
     await handle_send(started_metrics, SEND_INIT)

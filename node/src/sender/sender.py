@@ -13,6 +13,10 @@ def send_payload(payload):
 
 async def send_payload(payload, address):
     #print("IM IN SENDER")
+    if not address or not JWT_TOKEN:
+        logger.debug("[SENDER] Skipping send: configure endpoint and jwt_token in node.ini")
+        return None, "Node endpoint or token is not configured"
+
     logger.debug("[SENDER] Sending metrics")
     headers = {"X-API-Key": f"{JWT_TOKEN}"}
     try:

@@ -3,7 +3,12 @@ import GPUtil
 
 def get_volatile_gpu_metrics():
     gpus = {}
-    for gpu in GPUtil.getGPUs():
+    try:
+        detected_gpus = GPUtil.getGPUs()
+    except Exception:
+        return gpus
+
+    for gpu in detected_gpus:
         gpus[gpu.id] = {
             "load_percent": round(gpu.load * 100, 2),
             "memory_used": gpu.memoryUsed,
@@ -18,6 +23,7 @@ def get_volatile_metrics():
     core_loads = psutil.cpu_percent(percpu=True)
     virtual_mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
+    cpu_frequency = psutil.cpu_freq()
     return {
         "cpu_percent": psutil.cpu_percent(),
         "cores": [
@@ -36,7 +42,7 @@ def get_volatile_metrics():
             "percent": swap.percent,
         },
         "gpu_load": get_volatile_gpu_metrics(),
-        "current_freq": psutil.cpu_freq().current
+        "current_freq": cpu_frequency.current if cpu_frequency is not None else None
     }
 
 
