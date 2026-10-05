@@ -69,6 +69,11 @@ def get_static_info():
         "max_freq": psutil.cpu_freq().max
     }
 
+async def handle_send(metrics, address):
+    status, text = await send_payload(metrics, address)
+    if status != 200:
+        #print(f"[RETRY NEEDED] Status: {status}, response: {text}")
+        logger.error(f"[ERROR-Run_agent] Status: {status}, response: {text}")
 
 async def run_agent():
     logger.info("[NODE] Node started")
@@ -77,7 +82,6 @@ async def run_agent():
     await handle_send(started_metrics, SEND_INIT)
     start_background_monitoring()
     while True:
-
         try:
             #TODO возможно вынести в asyncio.to_thread(...) из-за psutil.cpu_percent(interval=1) - блокирует в любом случае на 1 секунду или делать 0
             metrics = await build_metrics()
@@ -85,21 +89,18 @@ async def run_agent():
             #print(f"[ERROR] Failed to build metrics: {e}")
             logger.error(f"[ERROR-Run_agent] Failed to build metrics: {e}")
             return
-
         metrics["agent_resource_usage"] = get_agent_usage_metrics()
-
         asyncio.create_task(asyncio.to_thread(save_metrics, metrics))
         asyncio.create_task(handle_send(metrics, SEND_METRIC))
-
         await asyncio.sleep(1)
 
-
-async def handle_send(metrics, address):
-    status, text = await send_payload(metrics, address)
-    if status != 200:
-        #print(f"[RETRY NEEDED] Status: {status}, response: {text}")
-        logger.error(f"[ERROR-Run_agent] Status: {status}, response: {text}")
-
+async def run_virtual_node(node_id):
+    print(f"Node {node_id} started")
+    await run_agent()
+async def run_virtual():
+    tasks = [asyncio.create_task(run_virtual_node(i)) for i in range(100)]
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     asyncio.run(run_agent())
+    #asyncio.run(run_virtual())

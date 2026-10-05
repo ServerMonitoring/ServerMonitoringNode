@@ -14,12 +14,13 @@ def send_payload(payload):
 async def send_payload(payload, address):
     #print("IM IN SENDER")
     logger.debug("[SENDER] Sending metrics")
-    headers = {"Authorization": f"Bearer {JWT_TOKEN}"}
+    headers = {"X-API-Key": f"{JWT_TOKEN}"}
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(address, json=payload, headers=headers, timeout=5) as response:
+            async with session.post(address, json=payload,
+                                    headers=headers, timeout=5) as response:
                 text = await response.text()
-                #print(response.status, text)
+
                 logger.debug(f"[SENDER] Response Status {response.status} and data {text}")
                 return response.status, text
     except aiohttp.ClientError as e:
