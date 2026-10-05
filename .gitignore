@@ -11,3 +11,6 @@ node/debug.log
 node/error.log
 /.idea
 /node/.idea
+node/src/debug.log
+node/src/error.log
+node/src/metrics_log.json
