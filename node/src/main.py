@@ -19,7 +19,7 @@ memory_usages = deque(maxlen=INTERVAL)
 def start_background_monitoring():
     def monitor():
         process = psutil.Process(os.getpid())
-        cpu_count = psutil.cpu_count(logical=True)
+        cpu_count = psutil.cpu_count(logical=True) or 1
         while True:
             cpu = process.cpu_percent(interval=1) / cpu_count
             mem = process.memory_info().rss / 1024 ** 2
@@ -72,7 +72,7 @@ def get_static_info():
 
 async def handle_send(metrics, address):
     status, text = await send_payload(metrics, address)
-    if status != 200:
+    if status is None or not 200 <= status < 300:
         #print(f"[RETRY NEEDED] Status: {status}, response: {text}")
         logger.error(f"[ERROR-Run_agent] Status: {status}, response: {text}")
 
@@ -95,16 +95,8 @@ async def run_agent():
             return
         metrics["agent_resource_usage"] = get_agent_usage_metrics()
         asyncio.create_task(asyncio.to_thread(save_metrics, metrics))
-        asyncio.create_task(handle_send(metrics, SEND_METRIC))
+        await handle_send(metrics, SEND_METRIC)
         await asyncio.sleep(1)
-
-async def run_virtual_node(node_id):
-    print(f"Node {node_id} started")
-    await run_agent()
-async def run_virtual():
-    tasks = [asyncio.create_task(run_virtual_node(i)) for i in range(100)]
-    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     asyncio.run(run_agent())
-    #asyncio.run(run_virtual())

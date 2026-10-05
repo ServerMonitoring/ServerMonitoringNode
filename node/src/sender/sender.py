@@ -1,4 +1,4 @@
-import requests
+import asyncio
 import aiohttp
 from config import JWT_TOKEN
 from utils.logger import logger
@@ -19,18 +19,26 @@ async def send_payload(payload, address):
 
     logger.debug("[SENDER] Sending metrics")
     headers = {"X-API-Key": f"{JWT_TOKEN}"}
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(address, json=payload,
-                                    headers=headers, timeout=5) as response:
-                text = await response.text()
+    max_attempts = 5
+    timeout = aiohttp.ClientTimeout(total=5)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        for attempt in range(max_attempts):
+            try:
+                async with session.post(address, json=payload, headers=headers) as response:
+                    text = await response.text()
+                    logger.debug(f"[SENDER] Response Status {response.status} and data {text}")
+                    if not (response.status >= 500 or response.status == 429):
+                        return response.status, text
+                    if attempt == max_attempts - 1:
+                        return response.status, text
+                    logger.warning("[SENDER] Retryable HTTP status %s; attempt %s/%s", response.status, attempt + 1, max_attempts)
+            except aiohttp.ClientError as error:
+                if attempt == max_attempts - 1:
+                    logger.error("[ERROR-SENDER] Request failed after retries: %s", error)
+                    return None, str(error)
+                logger.warning("[SENDER] Request failed; attempt %s/%s: %s", attempt + 1, max_attempts, error)
 
-                logger.debug(f"[SENDER] Response Status {response.status} and data {text}")
-                return response.status, text
-    except aiohttp.ClientError as e:
-        #print(f"[SEND ERROR] Failed to send metrics: {e}")
-        logger.error(f"[ERROR-SENDER] Failed to send metrics: {e}")
-        return None, str(e)
+            await asyncio.sleep(min(2 ** attempt, 16))
 
 
 if __name__ == "__main__":

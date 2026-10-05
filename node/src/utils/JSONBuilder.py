@@ -1,5 +1,6 @@
 import asyncio
 import time
+import uuid
 from datetime import datetime, timezone
 
 import psutil
@@ -136,6 +137,7 @@ async def build_metrics():
     averaged, delta, static = await collect_data()
     logger.debug(f"[JSONBuilder] Building JSON")
     metrics = {"up": True,
+               "event_id": str(uuid.uuid4()),
                "uptime": round(time.time() - psutil.boot_time(), 2),
                "failed_logins": get_failed_ssh_attempts(),
                "cpu": build_cpu_metrics(averaged, delta),
