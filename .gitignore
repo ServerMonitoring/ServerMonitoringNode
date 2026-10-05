@@ -10,3 +10,4 @@ node/metrics_log.json
 node/debug.log
 node/error.log
 /.idea
+/node/.idea
