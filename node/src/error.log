@@ -1,0 +1,5 @@
+2026-10-05 11:38:00,296 [INFO] [NODE] Node started
+2026-10-05 11:38:02,339 [ERROR] [ERROR-SENDER] Failed to send metrics: Cannot connect to host localhost:8080 ssl:default [None]
+2026-10-05 11:38:02,339 [ERROR] [ERROR-Run_agent] Status: None, response: Cannot connect to host localhost:8080 ssl:default [None]
+2026-10-05 11:38:14,963 [INFO] [NODE] Node started
+2026-10-05 11:38:22,993 [INFO] [NODE] Node started
