@@ -19,7 +19,7 @@ async def collect_data():
 
     for _ in range(INTERVAL):
         #print(f"Start iteration {_}")
-        logger.debug(f"[JSONBuilder] Collected volatile metrics for {_}")
+        logger.debug(f"[JSONBuilder] Collected volatile metrics for {_} second")
         data = get_volatile_metrics()
         volatile_data.append(data)
         #print(f"Collected volatile metrics for {_}")
@@ -150,6 +150,7 @@ def build_gpu(averaged_gpu, static_gpu):
 
 async def build_metrics():
     averaged, delta, static = await collect_data()
+    logger.debug(f"[JSONBuilder] Building JSON")
     metrics = {"up": True,
                "uptime": round(time.time() - psutil.boot_time(), 2),
                "failed_logins": get_failed_ssh_attempts() if is_linux() else -1,
